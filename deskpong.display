@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<display 
+	window-flags="below" 
+	anchor="se" 
+	width="180" 
+	height="120"
+	bg-color="#00000033">
+
+<meta author="Alejandro Vera"
+	version="0.3"
+	name="DeskPong"
+	category="Misc/Fun"
+	description="A little desktlet with a Pong game in it"
+	dependency="0.35"
+	preview="gfx/preview.png"
+	/>
+	
+<canvas 
+	id="board" 
+	x="10" y="10" 
+	width="160" height="100" 
+	on-enter="must_move_right = False; move_left_player = playing_left_move ; funcion = mouse_move"
+	on-leave="funcion = bot_move ; move_left_player = bot_left_move ; must_move_right = True"
+	on-motion="funcion(self.event.x, self.event.y)"
+	on-click="if(not playing): start_match()"/>
+
+
+<label value="hola" id="debug" color="#00ff00" />
+<canvas id="left_score" anchor="n" x="30%" y="11" width="7" height="7"/> 
+<canvas id="right_score" anchor="n" x="70%" y="11" width="7" height="7"/>
+
+<script><![CDATA[
+
+
+svg = """
+<svg>
+
+<rect id="back" x="0" y="0" width="100" height="160" style="fill:black"/>
+
+
+<rect id="top-bar" x="0" y="10" width="160" height="5" style="fill:white"/>
+<rect id="middle-bar" x="50" y="10" width="3" height="100" style="fill:white"/>
+<rect id="bottom-bar" x="0" y="95" width="100" height="5" style="fill:white" />
+
+<rect id="left-player" x="3" y="10" width="2" height="16" style="fill:white"/>
+<rect id="right-player" x="95" y="10" width="2" height="16" style="fill:white"/>
+
+<rect id="ball" x="10" y="20" width="3" height="5" style="fill:white"/>
+
+
+</svg>
+"""
+Dsp.board.graphics = svg
+
+
+must_move_right = True
+playing = True
+
+x_direction = 1
+y_direction = 1
+
+dx_ball = 2
+dy_ball = 3
+
+top = 100 - 5
+bottom = 15
+
+svg = """
+	<svg>
+		<rect id="bar_0" x="0" y="0" width="100" height="10" style="fill:white; stroke:white"/>
+		<rect id="bar_1" x="90" y="10" width="10" height="40" style="fill:white; stroke:white"/>
+		<rect id="bar_2" x="90" y="50" width="10" height="40" style="fill:white; stroke:white"/>
+		<rect id="bar_3" x="0" y="90" width="100" height="10" style="fill:white; stroke:white"/>
+		<rect id="bar_4" x="0" y="50" width="10" height="40" style="fill:white; stroke:white"/>
+		<rect id="bar_5" x="0" y="10" width="10" height="40" style="fill:white; stroke:white"/>
+		<rect id="bar_6" x="15" y="45" width="70" height="10" style="fill:white; stroke:white"/> 
+	</svg>
+"""
+
+Dsp.right_score.graphics = svg
+Dsp.left_score.graphics = svg
+
+Dsp.right_score.dom.update()
+Dsp.left_score.dom.update()
+
+def debug(val):
+	Dsp.debug.value = val
+
+def turn_led_color(score, led, val):
+	if(score == "left"):
+		score_canvas = Dsp.left_score
+	else:
+		score_canvas = Dsp.right_score
+
+	#score_canvas.x = Unit(0, PX)
+	#score_canvas.y = Unit(0, PX)
+
+
+	led_rect = score_canvas.dom.get("bar_" + str(led))
+
+	if(val):
+		led_rect["style"] = "fill:white; stroke:white"
+	else:
+		led_rect["style"] = "fill:black; stroke:black"
+	score_canvas.dom.update()
+
+numbers = [ 
+	[0, 1, 2, 3, 4, 5] 
+	, [1, 2] 
+	, [0, 1, 3, 4, 6] 
+	, [0, 1, 2, 3, 6] 
+	, [1, 2, 5, 6] 
+	, [0, 2, 3, 5, 6] 
+	, [2, 3, 4, 5, 6] 
+	, [0, 1, 2] 
+	, [0, 1, 2, 3, 4, 5, 6] 
+	, [0, 1, 2, 3, 5, 6] 
+	]
+
+left_score = 0
+right_score = 0
+
+def change_score(score_id, num):
+	global numbers
+
+	list = numbers[num]
+
+	for a in range(7):
+		turn_led_color(score_id, a, False)
+	for a in list:
+		turn_led_color(score_id, a, True)
+	
+
+def lite_number(score_id, score):
+	pass
+	change_score(score_id, score)
+
+def update_scores():
+	global left_score
+	global right_score
+
+	lite_number("left", left_score)
+	lite_number("right", right_score)
+	
+
+update_scores()
+
+def start_match():
+	global playing
+	playing = True
+
+	dx_ball = 2
+	dy_ball = 3
+
+	x_direction = 1
+	y_direction = 1
+
+
+	ball = Dsp.board.dom.get("ball")
+	ball["x"] = "50" 
+	ball["y"] = "50" 
+		  
+
+def getInboundPos(ball_pos, height):
+	global top, bottom
+	mid = height / 2
+	if( ball_pos <= ( top - mid) and ball_pos >= bottom + mid):
+		return ball_pos - mid
+	if( ball_pos >= (top - mid )):
+		return top - height
+	return bottom 
+
+
+def mouse_move(x, y):
+	rp = Dsp.board.dom.get("right-player")
+	rp["y"] = str(getInboundPos(int(y.as_px()), int(rp["height"])))
+
+def bot_move(x, y):
+	pass
+
+def bot_left_move(x, y):
+	lp = Dsp.board.dom.get("left-player")
+	lp["y"] =  str(getInboundPos(y, int(lp["height"])))
+
+def playing_left_move(x, y):
+
+	global x_direction
+
+	lp = Dsp.board.dom.get("left-player")
+	y_lp = int(lp["y"]) +  int(lp["height"]) / 2 
+
+	#debug(str(x_direction))
+	if( x_direction < 0):
+		m = 1.0 * dy_ball * y_direction / ( dx_ball * x_direction)
+		next_y = (m * 5) + y - (m * x)
+
+		if(next_y > y_lp):	
+			y_lp +=3
+		elif(next_y < y_lp):
+			y_lp -= 3
+		#debug(str(next_y) + " --> "  + str(y_lp))
+	else:
+		if(y > y_lp):
+			y_lp += 3
+		elif(y < y_lp):
+			y_lp -= 3
+	
+	lp["y"] =  str(getInboundPos(y_lp, int(lp["height"])))
+
+
+
+funcion = bot_move
+move_left_player = bot_left_move
+
+
+
+def end_match():
+	global playing
+	playing = False
+
+def reset_scores():
+	global left_score, right_score
+	left_score = 0
+	right_score = 0
+
+def bounce():
+	global left_score, right_score
+
+	global must_move_right
+	global x_direction, y_direction
+	global dx_ball, dy_ball
+	global top, bottom
+	global playing
+	
+	ball = Dsp.board.dom.get("ball")
+
+	x_ball = int(ball["x"])
+	y_ball = int(ball["y"])
+	
+
+	if( x_ball >=5 ):
+		move_left_player(x_ball, y_ball)	
+
+	rp = Dsp.board.dom.get("right-player")
+	lp = Dsp.board.dom.get("left-player")
+
+	if(must_move_right):
+		rp["y"] =  str(getInboundPos(y_ball, int(rp["height"])))
+
+	if( x_ball <= 5 ):
+		y_bottom = int(lp["y"])
+		y_top = y_bottom + int(lp["height"]) - 5
+
+		if( y_bottom <= y_ball and y_ball <= y_top ):
+			x_direction = 1	
+
+	if( x_ball <= 3 and playing):
+		end_match()
+		right_score += 1
+		if(right_score > 9 or left_score > 9): reset_scores()
+		update_scores()
+
+
+	if( x_ball >= 92 ):
+		y_bottom = int(rp["y"])
+		y_top = y_bottom + int(rp["height"])
+
+		if( y_bottom <= y_ball and y_ball <= y_top ):
+			x_direction = -1	
+		
+	if( x_ball >= 98 and playing):
+		end_match()
+		left_score += 1
+		if(right_score > 9 or left_score > 9): reset_scores()
+		update_scores()
+
+	if( y_ball >= top or y_ball <= bottom):
+		y_direction *= -1
+
+	if(playing):
+			  x_ball += dx_ball * x_direction
+			  y_ball += dy_ball * y_direction
+
+			  ball["x"] = str(x_ball)
+			  ball["y"] = str(y_ball)
+
+	Dsp.board.dom.update()
+	return True
+
+add_timer(50, bounce)
+
+]]></script>
+
+
+</display>
